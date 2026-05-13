@@ -6,3 +6,4 @@ local.settings.json
 .env
 venv/
 .env.server
+app_settings.json

@@ -89,10 +89,15 @@ def _read_latest_blob() -> list:
 
 
 def _compute_flow_pct(records: list) -> dict:
-    """Average actual flow per bay as % of ideal (220 L/min)."""
+    """Average actual flow per bay as % of ideal (220 L/min).
+    Only non-zero readings are counted — zero means valve closed, not a performance issue.
+    Returns NULL for bays with no active flow in the current window.
+    """
     sums = {}
     counts = {}
     for r in records:
+        if r["tag_value"] == 0.0:
+            continue
         tag = r["tag_name"].split(".")[-1]
         if tag in FT_TAG_MAP:
             col = FT_TAG_MAP[tag][0]
@@ -105,7 +110,7 @@ def _compute_flow_pct(records: list) -> dict:
             avg = sums[col] / counts[col]
             result[col] = round(avg / IDEAL_FLOW_LPM * 100, 2)
         else:
-            result[col] = 0.0
+            result[col] = None  # no active filling session in this window
     return result
 
 
