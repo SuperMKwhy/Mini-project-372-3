@@ -144,14 +144,11 @@ def _push_to_powerbi(flow_pct: dict, failure_rate: dict) -> None:
         return
 
     timestamp = datetime.now(timezone.utc).isoformat()
-    rows = []
+    row = {"Timestamp": timestamp}
     for col in BAY_COLS:
-        rows.append({
-            "timestamp": timestamp,
-            "bay": col,
-            "flow_pct": flow_pct.get(col),
-            "failure_rate": failure_rate.get(col),
-        })
+        row[f"{col}_flow_pct"] = flow_pct.get(col)
+        row[f"{col}_failure_rate"] = failure_rate.get(col)
+    rows = [row]
 
     body = json.dumps(rows).encode("utf-8")
     req = urllib.request.Request(
