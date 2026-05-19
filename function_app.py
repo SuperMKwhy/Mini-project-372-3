@@ -31,6 +31,8 @@ def _get_conn():
         user=os.environ["SqlUser"],
         password=os.environ["SqlPassword"],
         database=os.environ["SqlDatabase"],
+        login_timeout=8,
+        timeout=8,
     )
 
 
@@ -79,8 +81,8 @@ def _read_latest_blob() -> list:
         logging.warning("No blobs found in container")
         return []
 
-    blob_data = container.get_blob_client(blobs[0].name).download_blob().readall()
     logging.info("Reading blob: %s", blobs[0].name)
+    blob_data = container.get_blob_client(blobs[0].name).download_blob(timeout=8).readall()
 
     records = []
     for line in blob_data.decode("utf-8").splitlines():
