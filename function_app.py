@@ -10,6 +10,7 @@ from azure.storage.blob import BlobServiceClient
 app = func.FunctionApp()
 
 IDEAL_FLOW_LPM = 220.0
+_kpi_table_ready = False
 
 # Maps PLC tag suffix -> (kpi_column, bay_number_in_failure_table, failure_table)
 FT_TAG_MAP = {
@@ -168,10 +169,13 @@ def compute_kpi(timer: func.TimerRequest) -> None:
     records = _read_latest_blob()
     flow_pct = _compute_flow_pct(records)
 
+    global _kpi_table_ready
     conn = _get_conn()
     try:
         with conn.cursor() as cur:
-            _ensure_kpi_table(cur)
+            if not _kpi_table_ready:
+                _ensure_kpi_table(cur)
+                _kpi_table_ready = True
             _upsert_kpi(cur, "Performance_Flow_Pct", flow_pct)
 
             failure_rate = _compute_failure_rate(cur)
