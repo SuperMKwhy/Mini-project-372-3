@@ -2,8 +2,9 @@ import azure.functions as func
 import logging
 import json
 import os
+import urllib.request
 import pymssql
-from datetime import datetime
+from datetime import datetime, timezone
 from azure.storage.blob import BlobServiceClient
 
 app = func.FunctionApp()
@@ -136,8 +137,34 @@ def _compute_failure_rate(cursor) -> dict:
     return result
 
 
-# Change schedule to "0 * * * * *" (every minute) for production
-@app.timer_trigger(schedule="*/5 * * * * *", arg_name="timer", run_on_startup=True, use_monitor=False)
+def _push_to_powerbi(flow_pct: dict, failure_rate: dict) -> None:
+    push_url = os.environ.get("POWERBI_PUSH_URL", "")
+    if not push_url:
+        logging.warning("POWERBI_PUSH_URL not set — skipping Power BI push")
+        return
+
+    timestamp = datetime.now(timezone.utc).isoformat()
+    rows = []
+    for col in BAY_COLS:
+        rows.append({
+            "timestamp": timestamp,
+            "bay": col,
+            "flow_pct": flow_pct.get(col),
+            "failure_rate": failure_rate.get(col),
+        })
+
+    body = json.dumps(rows).encode("utf-8")
+    req = urllib.request.Request(
+        push_url,
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        logging.info("Power BI push status: %s", resp.status)
+
+
+@app.timer_trigger(schedule="*/10 * * * * *", arg_name="timer", run_on_startup=True, use_monitor=False)
 def compute_kpi(timer: func.TimerRequest) -> None:
     logging.info("KPI ETL triggered at %s", datetime.utcnow().isoformat())
 
@@ -157,3 +184,5 @@ def compute_kpi(timer: func.TimerRequest) -> None:
         logging.info("KPI upserted — flow_pct: %s | failure_min: %s", flow_pct, failure_rate)
     finally:
         conn.close()
+
+    _push_to_powerbi(flow_pct, failure_rate)
