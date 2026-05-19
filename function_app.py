@@ -18,8 +18,8 @@ FT_TAG_MAP = {
     "FT_100_2": ("diesel_2",    2, "S3A_FAILURE_LOGS"),
     "FT_100_3": ("diesel_3",    3, "S3A_FAILURE_LOGS"),
     "FT_100_4": ("diesel_4",    4, "S3A_FAILURE_LOGS"),
-    "FT_200_1": ("gasohol95_5", 1, "S3B_FAILURE_LOGS"),
-    "FT_200_2": ("gasohol95_6", 2, "S3B_FAILURE_LOGS"),
+    "FT_200_1": ("gasohol95_5", 5, "S3B_FAILURE_LOGS"),
+    "FT_200_2": ("gasohol95_6", 6, "S3B_FAILURE_LOGS"),
 }
 
 BAY_COLS = ["diesel_1", "diesel_2", "diesel_3", "diesel_4", "gasohol95_5", "gasohol95_6"]
