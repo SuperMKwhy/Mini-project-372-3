@@ -11,14 +11,14 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.'
-  PYTHON_VERSION: '3.13'
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.' # set this to the path to your web app project, defaults to the repository root
+  PYTHON_VERSION: '3.13' # set this to the python version to use (supports 3.6, 3.7, 3.8)
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: read #This is required for actions/checkout
 
     steps:
       - name: Checkout repository
@@ -29,24 +29,33 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
+      - name: Create and start virtual environment
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+
       - name: Install dependencies
-        run: pip install --target=".python_packages/lib/site-packages" -r requirements.txt
+        run: pip install -r requirements.txt
+
+      # Optional: Add step to run tests here
 
       - name: Zip artifact for deployment
-        run: zip -r release.zip . --exclude "*.git*"
+        run: zip release.zip ./* -r
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: python-app
-          path: release.zip
+          path: |
+            release.zip
+            !venv/
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
     permissions:
-      id-token: write
-      contents: read
+      id-token: write #This is required for requesting the JWT
+      contents: read #This is required for actions/checkout
 
     steps:
       - name: Download artifact from build job
@@ -54,17 +63,23 @@ jobs:
         with:
           name: python-app
 
+      - name: Unzip artifact for deployment
+        run: |
+          unzip release.zip
+          rm release.zip
+        
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_463B6D9EB9464E199415228E3D215E53 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_E225AC5B71C747FDBD99BA031A53F252 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_9BAACB3C7CA9427C828C37B660F4CA8E }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_CFFF8EB13A304221B5C9A80B57B05CC6 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_8618FC485AB445818A95B2AE3A98CD67 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_1E37CE92E36F4FB3B5ED5E0A85299FFC }}
 
-      - name: Deploy to Azure Functions
+      - name: 'Deploy to Azure Functions'
         uses: Azure/functions-action@v1
         id: deploy-to-function
         with:
           app-name: 'mp-etl-re'
           slot-name: 'Production'
-          package: release.zip
+          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+          
